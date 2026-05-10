@@ -6,6 +6,19 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.1.7] – 2026-05-10
+
+### Fixed
+- **Sidebar ingress conflict** — `ports`/`ports_description` entries in `config.json`
+  conflicted with `ingress: true`: Supervisor tried to bind the same port twice and
+  the ingress route lost. Removed the `ports` block; ingress owns the networking.
+- **Changelog not showing in HA** — HA Supervisor reads `<addon_dir>/CHANGELOG.md`
+  (i.e., `homebox/CHANGELOG.md`), never the repo root. Created the file in the correct
+  location with bare `## X.Y.Z` headers as required by the Supervisor's parser.
+  Bracketed format `## [X.Y.Z]` is silently ignored by HA.
+
+---
+
 ## [1.1.6] – 2026-05-10
 
 ### Fixed
