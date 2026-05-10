@@ -8,7 +8,7 @@
     "amd64",
     "aarch64"
   ],
-  "image": "ghcr.io/amantux/ha-homebox-addon/homebox",
+  "image": "ghcr.io/amantux/ha-homebox-addon",
   "startup": "application",
   "boot": "auto",
   "ingress": true,

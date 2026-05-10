@@ -1,3 +1,15 @@
+## 1.2.5
+- **Fix: GHCR image was inaccessible (private package)** — The nested image path
+  `ghcr.io/amantux/ha-homebox-addon/homebox` caused the GitHub API visibility call
+  to return HTTP 404 (slash in package name breaks the REST endpoint). Renamed image
+  to `ghcr.io/amantux/ha-homebox-addon` (flat name) so the visibility PATCH succeeds
+  automatically after every CI publish.
+
+- **Fix: ARM64 binary execution failure** — Added explicit `chmod +x /app/api` in
+  Dockerfile (belt-and-suspenders; Go build sets it, but COPY may not always preserve
+  it). Added `file` utility to runtime image and diagnostic log line at startup showing
+  host arch and binary type — makes future arch mismatches immediately diagnosable.
+
 ## 1.2.4
 - **Fix: Docker image now actually published to GHCR** — GitHub Actions intentionally
   does not trigger new workflow runs when `GITHUB_TOKEN` pushes a commit. The previous

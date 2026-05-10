@@ -54,4 +54,5 @@ nginx &
 sleep 1
 
 echo "[homebox] Starting Homebox on internal port ${HBOX_WEB_PORT}..."
+echo "[homebox] host arch: $(uname -m) | binary: $(file /app/api 2>/dev/null | cut -d, -f1 || echo unknown)"
 exec /app/api

@@ -37,12 +37,14 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 
 # ── Stage 4: Minimal runtime image (target platform) ───────────────────────
 FROM alpine:3.20
-RUN apk add --no-cache curl jq nginx tzdata ca-certificates
+RUN apk add --no-cache curl jq nginx tzdata ca-certificates file
 
 COPY --from=backend-builder /app/api /app/api
 COPY nginx.conf.tpl /etc/nginx/nginx.conf.tpl
 COPY run.sh /run.sh
-RUN chmod +x /run.sh && mkdir -p /run/nginx /data/homebox
+RUN chmod +x /run.sh /app/api \
+    && file /app/api \
+    && mkdir -p /run/nginx /data/homebox
 
 # nginx listens on ingress_port (8099); Homebox listens on 7745 (loopback only)
 EXPOSE 8099

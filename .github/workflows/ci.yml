@@ -154,13 +154,16 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/amantux/ha-homebox-addon/homebox:${{ needs.bump-version.outputs.new_version }}
-            ghcr.io/amantux/ha-homebox-addon/homebox:latest
+            ghcr.io/amantux/ha-homebox-addon:${{ needs.bump-version.outputs.new_version }}
+            ghcr.io/amantux/ha-homebox-addon:latest
 
       - name: Make GHCR package public
         run: |
+          # Package name is "ha-homebox-addon" (no nested path, no encoding needed)
           gh api --method PATCH \
-            /user/packages/container/ha-homebox-addon%2Fhomebox \
-            -f visibility=public || true
+            /user/packages/container/ha-homebox-addon \
+            -f visibility=public \
+          && echo "✅ GHCR package set to public" \
+          || echo "::warning::Could not auto-set visibility — go to: https://github.com/users/Amantux/packages/container/ha-homebox-addon/settings"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
