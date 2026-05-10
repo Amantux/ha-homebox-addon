@@ -30,59 +30,55 @@ http {
             proxy_pass         http://127.0.0.1:7745;
             proxy_http_version 1.1;
 
-            # WebSocket / SSE support
             proxy_set_header   Upgrade    $http_upgrade;
             proxy_set_header   Connection $connection_upgrade;
             proxy_read_timeout 86400s;
             proxy_send_timeout 86400s;
 
-            # Standard proxy headers
             proxy_set_header   Host              $http_host;
             proxy_set_header   X-Real-IP         $remote_addr;
             proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header   X-Forwarded-Proto $scheme;
-            proxy_set_header   X-Ingress-Path    "%%INGRESS_ENTRY%%";
 
-            # CRITICAL: strip Homebox's X-Frame-Options: DENY so HA can embed in iframe.
-            # Both the HA dashboard and the ingress URL share the same origin
-            # (e.g. v4qwgan6....ui.nabu.casa), so SAMEORIGIN is safe and sufficient.
+            # Strip Homebox's X-Frame-Options: DENY so HA can embed in its iframe.
+            # SAMEORIGIN is safe: parent and child share the same Nabu Casa origin.
             proxy_hide_header X-Frame-Options;
             proxy_hide_header Content-Security-Policy;
             add_header X-Frame-Options "SAMEORIGIN" always;
 
-            # CRITICAL: disable upstream compression so sub_filter can read plain text
+            # Required: disable upstream gzip so sub_filter reads plain text.
             proxy_set_header   Accept-Encoding   "";
 
-            # Rewrite Location: redirect headers from Homebox
+            # Rewrite Location headers on 302 redirects.
             absolute_redirect  off;
+            proxy_redirect     /homebox/ %%INGRESS_ENTRY%%/;
             proxy_redirect     / %%INGRESS_ENTRY%%/;
 
-            # ── Rewrite baked-in absolute asset paths ────────────────────
-            # Apply to every occurrence in every content type
+            # ── Path rewriting ─────────────────────────────────────────────────
+            # The frontend is built with NUXT_APP_BASE_URL=/homebox/ so Nuxt bakes
+            # /homebox/ into every asset path AND into the compiled Vue Router base.
+            # A single sub_filter rewrites /homebox/ → the real ingress entry,
+            # fixing asset loads AND client-side routing in one rule.
+            #
+            # In standalone mode (INGRESS_ENTRY="") this becomes:
+            #   sub_filter '/homebox/' '/';
+            # which correctly strips the prefix for direct access.
             sub_filter_once off;
             sub_filter_types *;
 
-            # HTML <link href> and <script src> pointing at /_nuxt/ chunks
-            sub_filter 'href="/_nuxt/'   'href="%%INGRESS_ENTRY%%/_nuxt/';
-            sub_filter 'src="/_nuxt/'    'src="%%INGRESS_ENTRY%%/_nuxt/';
+            # /set-theme.js is hardcoded absolute in nuxt.config.ts app.head —
+            # Nuxt does not auto-prefix head script src values with app.baseURL.
+            sub_filter 'src="/set-theme.js"' 'src="/homebox/set-theme.js"';
 
-            # Nuxt head script injected by nuxt.config.ts: { src: "/set-theme.js" }
-            sub_filter '"/set-theme.js"'  '"%%INGRESS_ENTRY%%/set-theme.js"';
-            sub_filter "'/set-theme.js'"  "'%%INGRESS_ENTRY%%/set-theme.js'";
+            # JS fetch/useFetch calls use absolute /api/ paths — not auto-prefixed.
+            sub_filter '"/api/'  '"/homebox/api/';
+            sub_filter "'/api/"  "'/homebox/api/";
+            sub_filter '`/api/'  '`/homebox/api/';
 
-            # /_nuxt/builds/ manifest references
-            sub_filter '"/_nuxt/builds/'  '"%%INGRESS_ENTRY%%/_nuxt/builds/';
-
-            # JavaScript API calls — all quote/template-literal styles
-            sub_filter '"/api/v1'    '"%%INGRESS_ENTRY%%/api/v1';
-            sub_filter "'/api/v1"    "'%%INGRESS_ENTRY%%/api/v1";
-            sub_filter '`/api/v1'    '`%%INGRESS_ENTRY%%/api/v1';
-
-            # fetch() and EventSource() calls
-            sub_filter 'fetch("/'         'fetch("%%INGRESS_ENTRY%%/';
-            sub_filter "fetch('/"         "fetch('%%INGRESS_ENTRY%%/";
-            sub_filter 'EventSource("/'   'EventSource("%%INGRESS_ENTRY%%/';
-            sub_filter "EventSource('/"   "EventSource('%%INGRESS_ENTRY%%/";
+            # Main rewrite: everything /homebox/ → actual ingress entry.
+            # Catches: /_nuxt/ assets, /api/ calls, /set-theme.js, router base.
+            sub_filter '/homebox/' '%%INGRESS_ENTRY%%/';
         }
     }
 }
+
