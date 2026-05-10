@@ -17,7 +17,9 @@ fi
 
 export TZ="${TZ:-UTC}"
 export HBOX_MODE="${HBOX_MODE:-production}"
-export HBOX_WEB_PORT="${HBOX_WEB_PORT:-7745}"
+# Use INGRESS_PORT injected by HA Supervisor when running behind ingress;
+# fall back to 7745 for standalone / direct-access use.
+export HBOX_WEB_PORT="${INGRESS_PORT:-${HBOX_WEB_PORT:-7745}}"
 export HBOX_WEB_HOST="${HBOX_WEB_HOST:-0.0.0.0}"
 export HBOX_STORAGE_DATA="${HBOX_STORAGE_DATA:-/data/homebox}"
 export HBOX_LOG_LEVEL="${HBOX_LOG_LEVEL:-info}"

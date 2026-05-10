@@ -1,6 +1,6 @@
 {
   "name": "Homebox",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "slug": "homebox",
   "description": "Home inventory management system with Home Assistant conversation support",
   "url": "https://github.com/Amantux/ha-homebox-addon",
@@ -33,5 +33,6 @@
     "data:rw"
   ],
   "hassio_api": true,
-  "hassio_role": "default"
+  "hassio_role": "default",
+  "ingress_stream": true
 }

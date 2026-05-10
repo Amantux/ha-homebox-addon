@@ -6,6 +6,30 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.1.6] – 2026-05-10
+
+### Fixed
+- **Sidebar / ingress not working** — `run.sh` was hardcoding `HBOX_WEB_PORT=7745`
+  and ignoring the `INGRESS_PORT` environment variable injected by HA Supervisor.
+  When the Supervisor assigns a dynamic ingress port, Homebox was listening on the
+  wrong port, so the sidebar panel showed a blank or unreachable page.
+  Fixed by using `${INGRESS_PORT:-7745}` so the Supervisor's assigned port always wins.
+- Added `ingress_stream: true` to `config.json` — required for WebSocket and
+  streaming connections (used by Homebox's live UI) to pass through the HA ingress
+  reverse proxy correctly.
+
+---
+
+## [1.1.5] – 2026-05-10
+
+### Changed
+- Version bump requested manually; no functional changes from 1.1.2.
+
+> **Note:** versions 1.1.3 and 1.1.4 were skipped — the project went from 1.1.2
+> directly to 1.1.5 at user request.
+
+---
+
 ## [1.1.2] – 2026-05-10
 
 ### Fixed
