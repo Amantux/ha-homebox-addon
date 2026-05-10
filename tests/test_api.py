@@ -1,5 +1,5 @@
 """Tests for the Homebox API client."""
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import aiohttp
 import pytest
@@ -75,3 +75,40 @@ class TestAsyncSearchItems:
         api, _ = _make_api(0, raise_exc=aiohttp.ClientError("err"))
         with pytest.raises(CannotConnectError):
             await api.async_search_items("x")
+
+
+class TestAsyncListLocations:
+    async def test_returns_locations(self):
+        payload = {"locations": [{"id": "1", "name": "Garage"}, {"id": "2", "name": "Shed"}]}
+        api, _ = _make_api(200, payload)
+        locs = await api.async_list_locations()
+        assert len(locs) == 2
+        assert locs[0]["name"] == "Garage"
+
+    async def test_missing_key_returns_empty(self):
+        api, _ = _make_api(200, {})
+        locs = await api.async_list_locations()
+        assert locs == []
+
+    async def test_invalid_auth_raises(self):
+        api, _ = _make_api(401)
+        with pytest.raises(InvalidAuthError):
+            await api.async_list_locations()
+
+
+class TestAsyncGetItemsInLocation:
+    async def test_returns_items(self):
+        payload = {"items": [{"id": "1", "name": "Wrench", "location": {"name": "Garage"}}]}
+        api, _ = _make_api(200, payload)
+        items = await api.async_get_items_in_location("loc-1")
+        assert items[0]["name"] == "Wrench"
+
+    async def test_invalid_auth_raises(self):
+        api, _ = _make_api(401)
+        with pytest.raises(InvalidAuthError):
+            await api.async_get_items_in_location("loc-1")
+
+    async def test_connection_error_raises(self):
+        api, _ = _make_api(0, raise_exc=aiohttp.ClientError("err"))
+        with pytest.raises(CannotConnectError):
+            await api.async_get_items_in_location("loc-1")

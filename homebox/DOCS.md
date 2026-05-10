@@ -26,6 +26,74 @@ You can then ask things like:
 - *"Where is my hammer?"*
 - *"Find the camping tent"*
 - *"Locate my passport"*
+- *"What's in the garage?"*
+- *"Show me everything in the basement"*
+- *"Search for power tools"*
+- *"Do you know where my screwdriver is?"*
+
+## Lovelace Card Example
+
+The following configuration adds an inventory search card to your dashboard.
+
+### Step 1 — Add helpers
+
+Go to **Settings → Devices & Services → Helpers** and create two text helpers:
+
+| Name | Entity ID |
+|------|-----------|
+| Homebox Query | `input_text.homebox_query` |
+| Homebox Result | `input_text.homebox_result` |
+
+### Step 2 — Add a script
+
+Add this to `scripts.yaml` (or create via the Scripts UI):
+
+```yaml
+homebox_search:
+  alias: "Homebox Search"
+  sequence:
+    - service: conversation.process
+      data:
+        text: "{{ states('input_text.homebox_query') }}"
+        agent_id: conversation.homebox  # adjust to your agent entity id
+      response_variable: agent_reply
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.homebox_result
+      data:
+        value: "{{ agent_reply.response.speech.plain.speech }}"
+```
+
+### Step 3 — Add the Lovelace card
+
+Paste this into your dashboard YAML (Raw Configuration Editor):
+
+```yaml
+type: vertical-stack
+cards:
+  - type: entities
+    title: Inventory Search
+    entities:
+      - entity: input_text.homebox_query
+        name: Search term or question
+
+  - type: button
+    name: Search Homebox
+    tap_action:
+      action: call-service
+      service: script.homebox_search
+
+  - type: markdown
+    title: Results
+    content: >
+      {{ states('input_text.homebox_result') or '_Ask something above…_' }}
+```
+
+**Example queries to try in the card:**
+- `where is my hammer?`
+- `what's in the garage?`
+- `find camping gear`
+- `search for power drill`
 
 ## Configuration Options
 

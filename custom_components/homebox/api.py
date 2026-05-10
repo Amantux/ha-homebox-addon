@@ -56,16 +56,35 @@ class HomeboxAPI:
         except aiohttp.ClientError as err:
             raise CannotConnectError from err
 
-    async def async_get_item(self, item_id: str) -> dict[str, Any]:
-        """Fetch a single item by ID (includes full location path)."""
+    async def async_list_locations(self) -> list[dict[str, Any]]:
+        """Return all locations defined in Homebox."""
         try:
             async with self._session.get(
-                f"{self._base_url}/api/v1/items/{item_id}",
+                f"{self._base_url}/api/v1/locations",
                 headers=self._headers,
             ) as resp:
                 if resp.status == 401:
                     raise InvalidAuthError
                 resp.raise_for_status()
-                return await resp.json()
+                data = await resp.json()
+                return data.get("locations", [])
+        except aiohttp.ClientError as err:
+            raise CannotConnectError from err
+
+    async def async_get_items_in_location(
+        self, location_id: str
+    ) -> list[dict[str, Any]]:
+        """Return all items stored in a specific location."""
+        try:
+            async with self._session.get(
+                f"{self._base_url}/api/v1/items",
+                headers=self._headers,
+                params={"locations": location_id},
+            ) as resp:
+                if resp.status == 401:
+                    raise InvalidAuthError
+                resp.raise_for_status()
+                data = await resp.json()
+                return data.get("items", [])
         except aiohttp.ClientError as err:
             raise CannotConnectError from err

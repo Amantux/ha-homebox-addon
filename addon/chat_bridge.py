@@ -1,7 +1,8 @@
 
-from flask import Flask, request, jsonify
-import sqlite3
 import os
+import sqlite3
+
+from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 DB_PATH = os.environ.get('HOMEBOX_DB_PATH', '/data/homebox.db')
@@ -10,7 +11,7 @@ def search_homebox(query):
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("SELECT name, description FROM items WHERE name LIKE ? OR description LIKE ?", 
+        cursor.execute("SELECT name, description FROM items WHERE name LIKE ? OR description LIKE ?",
                        (f'%{query}%', f'%{query}%'))
         results = cursor.fetchall()
         conn.close()
