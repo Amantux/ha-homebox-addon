@@ -9,6 +9,10 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# Allow the version-bump job to push commits back to the repo
+permissions:
+  contents: write
+
 jobs:
   validate-addon:
     name: Validate add-on config
@@ -57,3 +61,57 @@ jobs:
         run: pip install -r requirements_test.txt
       - name: Run tests
         run: pytest tests/ -v --tb=short
+
+  bump-version:
+    name: Auto-bump patch version
+    runs-on: ubuntu-latest
+    # Only bump on direct pushes to master/main — never on PRs or version-bump commits
+    if: >
+      github.event_name == 'push' &&
+      !startsWith(github.event.head_commit.message, 'chore: bump version')
+    needs: [validate-addon, lint, test]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Use a token with write access so the pushed commit triggers nothing
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Bump patch version in both config files
+        id: bump
+        run: |
+          OLD=$(python3 -c "import json; print(json.load(open('homebox/config.json'))['version'])")
+
+          python3 - "$OLD" <<'PYEOF'
+          import json, sys
+
+          def bump_patch(v):
+              parts = v.split(".")
+              parts[-1] = str(int(parts[-1]) + 1)
+              return ".".join(parts)
+
+          old = sys.argv[1]
+          new = bump_patch(old)
+
+          for path in ("homebox/config.json", "custom_components/homebox/manifest.json"):
+              with open(path) as f:
+                  data = json.load(f)
+              data["version"] = new
+              with open(path, "w") as f:
+                  json.dump(data, f, indent=2)
+                  f.write("\n")
+
+          print(f"Bumped {old} -> {new}")
+          PYEOF
+
+          NEW=$(python3 -c "import json; print(json.load(open('homebox/config.json'))['version'])")
+          echo "old_version=$OLD" >> "$GITHUB_OUTPUT"
+          echo "new_version=$NEW" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push version bump
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add homebox/config.json custom_components/homebox/manifest.json
+          git commit -m "chore: bump version ${{ steps.bump.outputs.old_version }} → ${{ steps.bump.outputs.new_version }} [skip ci]"
+          git push origin HEAD:${{ github.ref_name }}
