@@ -15,12 +15,6 @@
   "ingress_port": 7745,
   "panel_icon": "mdi:package-variant",
   "panel_title": "Homebox",
-  "ports": {
-    "7745/tcp": 7745
-  },
-  "ports_description": {
-    "7745/tcp": "Homebox web UI"
-  },
   "options": {
     "timezone": "UTC",
     "log_level": "info"
