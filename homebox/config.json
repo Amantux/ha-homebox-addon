@@ -6,9 +6,9 @@
   "url": "https://github.com/Amantux/ha-homebox-addon",
   "arch": [
     "amd64",
-    "armv7",
     "aarch64"
   ],
+  "image": "ghcr.io/amantux/ha-homebox-addon/homebox",
   "startup": "application",
   "boot": "auto",
   "ingress": true,

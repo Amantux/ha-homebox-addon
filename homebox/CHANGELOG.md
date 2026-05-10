@@ -1,4 +1,27 @@
-## 1.2.0
+## 1.2.2
+- **Fix: HA Supervisor could not build the image** — the 4-stage from-source
+  Dockerfile (git clone + pnpm install + go build) requires internet access,
+  substantial RAM, and ~10 minutes to complete. HA Supervisor's Docker builder
+  runs inside a constrained environment and fails with "unknown error".
+
+  Fix: CI (GitHub Actions) now builds the image and pushes it to
+  `ghcr.io/amantux/ha-homebox-addon/homebox`. The add-on `config.json` now
+  includes `"image": "ghcr.io/amantux/ha-homebox-addon/homebox"` so HA
+  Supervisor pulls the pre-built image from the registry instead of building
+  locally. Installation is now fast (~30 s) with no local compilation.
+
+- Multi-arch support: CI builds `linux/amd64` and `linux/arm64` (aarch64) using
+  Docker buildx with cross-compilation (Go native cross-compile; Node.js output
+  is arch-agnostic). QEMU is only used for the final Alpine runtime layer.
+
+- Removed `armv7` from supported architectures list (add-on now requires a
+  64-bit OS on Raspberry Pi; all RPi 3B+ and newer support 64-bit HA OS).
+
+## 1.2.1
+- Go toolchain bumped to `golang:1.26-alpine` — Homebox `go.mod` now requires
+  `go >= 1.26.0` (was using `golang:1.23` which rejected the build).
+
+
 - **Architecture overhaul: build Homebox from source (proper ingress support)**
   Homebox has no native sub-path/base-URL support. Previous versions used a
   fragile nginx sub_filter approach trying to pattern-match 12+ variations of
