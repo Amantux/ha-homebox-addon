@@ -9,30 +9,52 @@ There are no build, test, or lint commands — this repo contains only configura
 ## Architecture
 
 ```
-Dockerfile        — Multi-stage: copies /homebox binary from homebox/homebox:latest into HA base image
-config.json       — HA add-on manifest (name, slug, ports, supported arches, user-configurable options)
-build.json        — Maps each arch (amd64, armv7, aarch64) to the corresponding HA base image
-repository.json   — Identifies this repo as an HA add-on hub/repository
-custom_components/homebox/  — Placeholder directory (currently empty)
+repository.json                   — HA add-on hub manifest (repo root)
+homebox/                          — The Supervisor add-on (Docker container)
+  config.json                       HA add-on manifest: startup, ports, ingress, options/schema
+  Dockerfile                        Copies Homebox binary from ghcr.io/sysadminsmedia/homebox:latest
+  build.json                        Maps arch → HA base image (injected as ARG BUILD_FROM)
+  run.sh                            Reads bashio options, sets HBOX_* env vars, execs /homebox
+  DOCS.md                           User-facing documentation shown in HA UI
+custom_components/homebox/        — HA custom integration (conversation agent)
+  api.py                            Async REST client: GET /api/v1/items?search=...
+  conversation.py                   ConversationEntity wired to the Homebox API
+  config_flow.py                    UI flow: configure Homebox URL + API token
+  translations/en.json              Config flow UI strings
+tests/                            — pytest suite (stubs HA modules, no HA install needed)
 ```
 
-The Dockerfile uses `ARG BUILD_FROM` / `FROM ${BUILD_FROM}` — this is the required HA Supervisor pattern. The build system injects the correct arch-specific base image from `build.json` at build time.
+The add-on and the custom component are independent:
+- **Add-on** → runs the Homebox Go binary in a Supervisor container, persists data to `/data/homebox`
+- **Custom component** → connects to the running Homebox via its REST API, registers as a HA conversation agent
+
 
 ## Key Conventions
 
-### config.json schema
-This file must conform to the [HA Add-on configuration schema](https://developers.home-assistant.io/docs/add-ons/configuration). Key fields:
-- `slug` must be lowercase and match the directory name under `custom_components/`
-- `arch` lists supported architectures; must align with the keys in `build.json`
-- `ports` maps `"host:container/protocol"` strings
-- `options` defines user-configurable settings exposed in the HA UI
+### HA add-on structure (Supervisor requirements)
+- `homebox/config.json` must have `startup`, `boot`, `options` + `schema` (not nested option objects), and valid JSON throughout
+- `ports` keys are `"<container_port>/tcp"` → host port integer (e.g. `"7745/tcp": 7745`)
+- `ingress: true` + `ingress_port` wires the add-on into the HA sidebar without exposing a port externally
+- `map: ["data:rw"]` grants the add-on read/write to `/data` (persisted by Supervisor)
+- `run.sh` shebang must be `#!/usr/bin/with-contenv bashio` to get the HA environment + `bashio::config` helper
+- Homebox data directory: `/data/homebox` (set via `HBOX_STORAGE_DATA`)
+- Homebox listens on port `7745` (set via `HBOX_WEB_PORT=7745`)
 
-### Updating the Homebox version
-Change the image tag in the Dockerfile's `COPY --from=` line:
+### Dockerfile pattern
 ```dockerfile
-COPY --from=homebox/homebox:<tag> /homebox /homebox
+ARG BUILD_FROM
+FROM ${BUILD_FROM}          # HA Supervisor injects arch-specific base image from build.json
+COPY --from=ghcr.io/sysadminsmedia/homebox:latest /app/homebox /homebox
+```
+
+### Updating Homebox version
+Change the image tag in `homebox/Dockerfile`:
+```dockerfile
+COPY --from=ghcr.io/sysadminsmedia/homebox:<tag> /app/homebox /homebox
 ```
 
 ### Adding add-on configuration options
-1. Add the option to `config.json` under `options` with `type`, `description`, and optionally `default`
-2. Pass the value to the binary via `ENTRYPOINT` or an `run.sh` script if environment variable injection is needed
+1. Add default value to `options` in `homebox/config.json`
+2. Add type/validation to `schema` in `homebox/config.json`
+3. Read it in `homebox/run.sh` with `bashio::config 'option_name'`
+

@@ -1,0 +1,29 @@
+{
+  "name": "Homebox",
+  "version": "1.1.0",
+  "slug": "homebox",
+  "description": "Home inventory management system with Home Assistant conversation support",
+  "url": "https://github.com/Amantux/ha-homebox-addon",
+  "arch": ["amd64", "armv7", "aarch64"],
+  "startup": "application",
+  "boot": "auto",
+  "ingress": true,
+  "ingress_port": 7745,
+  "panel_icon": "mdi:package-variant",
+  "panel_title": "Homebox",
+  "ports": {
+    "7745/tcp": 7745
+  },
+  "ports_description": {
+    "7745/tcp": "Homebox web UI"
+  },
+  "options": {
+    "timezone": "UTC",
+    "log_level": "info"
+  },
+  "schema": {
+    "timezone": "str",
+    "log_level": "list(debug|info|warning|error)"
+  },
+  "map": ["data:rw"]
+}

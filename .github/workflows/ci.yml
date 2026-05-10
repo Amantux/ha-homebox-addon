@@ -12,12 +12,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate config.json
-        run: python -c "import json, sys; cfg=json.load(open('config.json')); assert 'name' in cfg and 'version' in cfg, 'Missing required fields'; print('config.json OK')"
+      - name: Validate homebox/config.json
+        run: |
+          python3 -c "
+          import json, sys
+          cfg = json.load(open('homebox/config.json'))
+          required = ['name', 'version', 'slug', 'description', 'startup', 'boot', 'options', 'schema']
+          missing = [f for f in required if f not in cfg]
+          if missing:
+              print(f'Missing fields: {missing}', file=sys.stderr); sys.exit(1)
+          assert 'ports' not in cfg or all('/' in k for k in cfg['ports']), 'ports keys must be <port>/tcp'
+          print('homebox/config.json OK')
+          "
       - name: Validate repository.json
-        run: python -c "import json; json.load(open('repository.json')); print('repository.json OK')"
+        run: python3 -c "import json; json.load(open('repository.json')); print('repository.json OK')"
       - name: Validate manifest.json
-        run: python -c "import json; m=json.load(open('custom_components/homebox/manifest.json')); assert m['domain']=='homebox'; print('manifest.json OK')"
+        run: python3 -c "import json; m=json.load(open('custom_components/homebox/manifest.json')); assert m['domain']=='homebox'; print('manifest.json OK')"
 
   lint:
     name: Lint (ruff)
