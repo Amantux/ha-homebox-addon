@@ -43,6 +43,13 @@ http {
             proxy_set_header   X-Forwarded-Proto $scheme;
             proxy_set_header   X-Ingress-Path    "%%INGRESS_ENTRY%%";
 
+            # CRITICAL: strip Homebox's X-Frame-Options: DENY so HA can embed in iframe.
+            # Both the HA dashboard and the ingress URL share the same origin
+            # (e.g. v4qwgan6....ui.nabu.casa), so SAMEORIGIN is safe and sufficient.
+            proxy_hide_header X-Frame-Options;
+            proxy_hide_header Content-Security-Policy;
+            add_header X-Frame-Options "SAMEORIGIN" always;
+
             # CRITICAL: disable upstream compression so sub_filter can read plain text
             proxy_set_header   Accept-Encoding   "";
 

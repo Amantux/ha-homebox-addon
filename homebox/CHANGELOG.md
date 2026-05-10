@@ -1,12 +1,14 @@
+## 1.1.9
+- Fix Firefox/browser blocking iframe embed: strip Homebox X-Frame-Options: DENY,
+  replace with X-Frame-Options: SAMEORIGIN so HA ingress can embed the UI in its panel
+- Also strip upstream Content-Security-Policy which may block framing
+
 ## 1.1.8
 - Fix sidebar/ingress: add nginx sidecar proxy with sub_filter path rewriting
-  Homebox's Nuxt SPA bakes absolute asset paths (/_nuxt/...) into the binary.
-  The browser resolves these against the HA origin root, bypassing the ingress
-  proxy. nginx rewrites all /_nuxt/, /api/v1, /set-theme.js paths to include
-  the full ingress entry prefix before they reach the browser.
-- ingress_port changed from 7745 to 8099 (nginx listens here; Homebox internal)
-- Homebox now bound to 127.0.0.1:7745 (loopback only, not directly reachable)
-- Ingress entry and port read from Supervisor REST API at container startup
+  Homebox Nuxt SPA bakes absolute asset paths (/_nuxt/...) into binary at build time.
+  Browser resolves them against HA root, bypassing the ingress proxy. nginx rewrites
+  /_nuxt/, /set-theme.js, /api/v1 to include the full ingress_entry prefix.
+- ingress_port changed to 8099 (nginx); Homebox internal on 127.0.0.1:7745
 
 ## 1.1.7
 - Fix sidebar ingress: removed ports/ports_description conflict with ingress: true
