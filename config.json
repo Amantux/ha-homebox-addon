@@ -1,0 +1,22 @@
+{
+  "name": "Homebox",
+  "version": "1.1.0",
+  "slug": "homebox",
+  "description": "Home inventory management system with HA Chat integration",
+  "arch": ["amd64", "armv7", "aarch64"],
+  "system": {
+    "boot": "automatic"
+  },
+  "ports": {
+    "80:80/tcp",
+    "8081:8081/tcp"
+  },
+  "options": {
+    "timezone": {
+      "description": "Timezone",
+      "type": "text",
+      "default": "UTC"
+    }
+  },
+  "discovery": ["homebox"]
+}

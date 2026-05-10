@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Homebox",
+        "description": "Enter your Homebox instance URL and API token. Find the token under **Settings → API Tokens** in the Homebox UI.",
+        "data": {
+          "url": "Homebox URL",
+          "token": "API Token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to Homebox. Check the URL and token.",
+      "invalid_auth": "Invalid API token.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "Homebox is already configured."
+    }
+  }
+}
