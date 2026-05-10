@@ -1,12 +1,19 @@
+## 1.1.8
+- Fix sidebar/ingress: add nginx sidecar proxy with sub_filter path rewriting
+  Homebox's Nuxt SPA bakes absolute asset paths (/_nuxt/...) into the binary.
+  The browser resolves these against the HA origin root, bypassing the ingress
+  proxy. nginx rewrites all /_nuxt/, /api/v1, /set-theme.js paths to include
+  the full ingress entry prefix before they reach the browser.
+- ingress_port changed from 7745 to 8099 (nginx listens here; Homebox internal)
+- Homebox now bound to 127.0.0.1:7745 (loopback only, not directly reachable)
+- Ingress entry and port read from Supervisor REST API at container startup
+
 ## 1.1.7
 - Fix sidebar ingress: removed ports/ports_description conflict with ingress: true
-  (Supervisor was trying to bind the same port twice, ingress route lost)
 - Fix changelog not showing in HA: moved CHANGELOG.md into add-on subdirectory
-  (Supervisor only reads <addon_dir>/CHANGELOG.md, not the repo root)
 
 ## 1.1.6
 - Fix sidebar not working: use INGRESS_PORT env var injected by Supervisor
-  instead of hardcoded port 7745
 - Add ingress_stream: true for WebSocket/streaming support through HA proxy
 
 ## 1.1.5

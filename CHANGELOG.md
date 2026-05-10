@@ -6,6 +6,31 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.1.8] – 2026-05-10
+
+### Fixed
+- **Sidebar / ingress frontend completely broken** — Root cause (confirmed by 4-expert debate
+  + HA Supervisor source code analysis): Homebox's Nuxt SPA is compiled with all asset paths
+  rooted at `/` (`/_nuxt/entry.js`, `/set-theme.js`, etc.). When served through the HA ingress
+  proxy at `/api/hassio_ingress/{token}/`, the browser resolves those absolute paths against
+  `https://ha-host:8123/` — entirely bypassing the ingress tunnel — so no JS/CSS loads.
+- **Fix**: Added nginx sidecar proxy inside the container.  
+  - nginx listens on `ingress_port` (8099) — the port Supervisor connects to.  
+  - Homebox binds to `127.0.0.1:7745` (loopback only, not directly reachable).  
+  - nginx uses `sub_filter` to rewrite `/_nuxt/`, `/api/v1`, `/set-theme.js`, etc. into
+    `{ingress_entry}/_nuxt/`, `{ingress_entry}/api/v1` etc. before responses reach the browser.  
+  - `ingress_entry` and `ingress_port` are read from Supervisor REST API at startup
+    (using existing `SUPERVISOR_TOKEN`; no bashio required).
+- **`INGRESS_PORT` myth busted**: Supervisor source (`supervisor/docker/addon.py`) only injects
+  `TZ`, `SUPERVISOR_TOKEN`, and `HASSIO_TOKEN`. The port is read from the Supervisor API.
+
+### Technical
+- Pattern proven by Mealie (`alexbelgium/hassio-addons`) and BirdNET-Go add-ons
+- `proxy_set_header Accept-Encoding ""` disables upstream gzip so `sub_filter` sees plain text
+- `sub_filter_once off` + `sub_filter_types *` applies rewrites to all content types
+
+---
+
 ## [1.1.7] – 2026-05-10
 
 ### Fixed
