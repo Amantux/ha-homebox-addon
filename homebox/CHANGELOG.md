@@ -1,3 +1,15 @@
+## 1.2.4
+- **Fix: Docker image now actually published to GHCR** — GitHub Actions intentionally
+  does not trigger new workflow runs when `GITHUB_TOKEN` pushes a commit. The previous
+  design pushed a bump commit and waited for a second CI run to publish; that second
+  run never fired. Fixed by running `publish` in the **same** CI workflow as
+  `bump-version`, using the new version from the bump step's output. Every push to
+  master now: validates → bumps version → builds and pushes the multi-arch image.
+
+## 1.2.3
+- Version bump (CI test of publish pipeline — publish job did not fire due to
+  GITHUB_TOKEN push limitation; fixed in 1.2.4).
+
 ## 1.2.2
 - **Fix: HA Supervisor could not build the image** — the 4-stage from-source
   Dockerfile (git clone + pnpm install + go build) requires internet access,
