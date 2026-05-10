@@ -1,10 +1,14 @@
 {
   "name": "Homebox",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "slug": "homebox",
   "description": "Home inventory management system with Home Assistant conversation support",
   "url": "https://github.com/Amantux/ha-homebox-addon",
-  "arch": ["amd64", "armv7", "aarch64"],
+  "arch": [
+    "amd64",
+    "armv7",
+    "aarch64"
+  ],
   "startup": "application",
   "boot": "auto",
   "ingress": true,
@@ -25,5 +29,7 @@
     "timezone": "str",
     "log_level": "list(debug|info|warning|error)"
   },
-  "map": ["data:rw"]
+  "map": [
+    "data:rw"
+  ]
 }
