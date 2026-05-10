@@ -1,28 +1,29 @@
-#!/usr/bin/with-contenv bashio
-# ==============================================================================
-# Home Assistant Add-on: Homebox
-# Starts the Homebox inventory management server
-# ==============================================================================
+#!/bin/sh
+set -e
 
-# Read config options
-TIMEZONE=$(bashio::config 'timezone')
-LOG_LEVEL=$(bashio::config 'log_level')
+# ---------------------------------------------------------------------------
+# Read config from HA Supervisor API (SUPERVISOR_TOKEN is injected when
+# hassio_api: true is set in config.json). Falls back to env/defaults.
+# ---------------------------------------------------------------------------
+if [ -n "${SUPERVISOR_TOKEN:-}" ]; then
+    CONFIG=$(curl -sf \
+        -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+        http://supervisor/addons/self/options/config 2>/dev/null || echo "{}")
+    ADDON_TZ=$(echo "$CONFIG"       | jq -r '.timezone  // empty' 2>/dev/null)
+    ADDON_LOG=$(echo "$CONFIG"      | jq -r '.log_level // empty' 2>/dev/null)
+    TZ="${ADDON_TZ:-${TZ:-UTC}}"
+    HBOX_LOG_LEVEL="${ADDON_LOG:-${HBOX_LOG_LEVEL:-info}}"
+fi
 
-# Apply timezone
-export TZ="${TIMEZONE}"
+export TZ="${TZ:-UTC}"
+export HBOX_MODE="${HBOX_MODE:-production}"
+export HBOX_WEB_PORT="${HBOX_WEB_PORT:-7745}"
+export HBOX_WEB_HOST="${HBOX_WEB_HOST:-0.0.0.0}"
+export HBOX_STORAGE_DATA="${HBOX_STORAGE_DATA:-/data/homebox}"
+export HBOX_LOG_LEVEL="${HBOX_LOG_LEVEL:-info}"
 
-# Homebox environment configuration
-export HBOX_MODE="production"
-export HBOX_WEB_PORT=7745
-export HBOX_WEB_HOST="0.0.0.0"
-export HBOX_STORAGE_DATA="/data/homebox"
-export HBOX_LOG_LEVEL="${LOG_LEVEL}"
+mkdir -p "${HBOX_STORAGE_DATA}"
 
-# Ensure data directory exists
-mkdir -p /data/homebox
+echo "[homebox] Starting on port ${HBOX_WEB_PORT} (TZ=${TZ}, log=${HBOX_LOG_LEVEL})"
 
-bashio::log.info "Starting Homebox on port 7745..."
-bashio::log.info "Data directory: /data/homebox"
-bashio::log.info "Timezone: ${TIMEZONE}"
-
-exec /usr/bin/homebox
+exec /app/api

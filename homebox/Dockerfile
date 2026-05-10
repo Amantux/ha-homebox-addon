@@ -1,14 +1,14 @@
 ARG BUILD_FROM
-FROM ${BUILD_FROM}
+# Use the official Homebox image as base — avoids s6-overlay which requires
+# true PID 1 and fails in LXC/Docker-in-Docker HA Supervisor installs.
+FROM ghcr.io/sysadminsmedia/homebox:latest
 
-# Runtime dependencies
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache curl jq
 
-# Copy self-contained Homebox binary from official image
-COPY --from=ghcr.io/sysadminsmedia/homebox:latest /app/api /usr/bin/homebox
-
-# Register as an s6 service (HA base image uses s6-overlay as PID 1)
-COPY run.sh /etc/services.d/homebox/run
-RUN chmod a+x /etc/services.d/homebox/run
+COPY run.sh /run.sh
+RUN chmod +x /run.sh
 
 EXPOSE 7745
+
+# run.sh execs /app/api as PID 1 — no init system needed
+ENTRYPOINT ["/run.sh"]
