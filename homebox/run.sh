@@ -25,4 +25,4 @@ bashio::log.info "Starting Homebox on port 7745..."
 bashio::log.info "Data directory: /data/homebox"
 bashio::log.info "Timezone: ${TIMEZONE}"
 
-exec /homebox
+exec /usr/bin/homebox
