@@ -20,7 +20,7 @@ RUN npm install -g pnpm \
     && pnpm build
 
 # ── Stage 3: Build Go backend (embeds frontend static files) ───────────────
-FROM golang:1.23-alpine AS backend-builder
+FROM golang:1.26-alpine AS backend-builder
 RUN apk add --no-cache ca-certificates
 WORKDIR /src
 COPY --from=source /src/backend/ ./backend/

@@ -6,6 +6,47 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.2.0] – 2026-05-10
+
+### Changed — Architecture overhaul: build from source (proper ingress)
+
+Previous versions used nginx `sub_filter` to pattern-match 12+ variations of `/_nuxt/` paths
+in Homebox's minified JavaScript — a fragile approach that broke whenever Nuxt added a new path
+format (e.g. `/_nuxt/builds/meta/`).
+
+Research across official HA add-ons confirmed the correct approach (Mealie pattern):
+
+1. **Build-time**: compile the Nuxt frontend with `NUXT_APP_BASE_URL=/homebox/` so every asset
+   path and the Vue Router base are baked in as `/homebox/_nuxt/...` instead of `/_nuxt/...`.
+2. **Runtime**: a single nginx `sub_filter '/homebox/' 'INGRESS_ENTRY/'` rewrites both asset
+   URLs and the router base to the real HA ingress path in one pass.
+
+Multi-stage Dockerfile:
+- Stage 1 (`alpine`): shallow git clone of `sysadminsmedia/homebox`
+- Stage 2 (`node:22-alpine`): `pnpm build` with `NUXT_APP_BASE_URL=/homebox/`
+- Stage 3 (`golang:1.23-alpine`): `go build ./app/api/` with the custom frontend embedded
+- Stage 4 (`alpine:3.20`): minimal runtime — nginx + binary only
+
+nginx `sub_filter` rules reduced from 12 to 4. Dependency on the pre-built
+`ghcr.io/sysadminsmedia/homebox:latest` image removed.
+
+> First install builds from source (~10 min). Subsequent installs use Docker layer cache.
+
+---
+
+## [1.1.9] – 2026-05-10
+
+### Fixed
+- **Firefox "Can't Open This Page" / iframe blocked** — Homebox sends `X-Frame-Options: DENY`
+  on every response. HA ingress embeds the add-on UI in a `<iframe>` in the sidebar. Browsers
+  enforce `X-Frame-Options: DENY` and refuse to display the frame.
+- Fix: nginx now strips the upstream header and responds with `X-Frame-Options: SAMEORIGIN`.
+  `SAMEORIGIN` is correct because the parent (HA dashboard) and the iframe (ingress URL) share
+  the same origin (e.g. the same Nabu Casa subdomain).
+- Also strips upstream `Content-Security-Policy` which may additionally block framing.
+
+---
+
 ## [1.1.8] – 2026-05-10
 
 ### Fixed
