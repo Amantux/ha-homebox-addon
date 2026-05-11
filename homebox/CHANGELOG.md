@@ -1,3 +1,10 @@
+## 1.2.6
+- **Fix: GHCR package visibility** — `GITHUB_TOKEN` in CI cannot change package
+  visibility (GitHub limitation). CI now uses `GHCR_PAT` secret (a Personal Access
+  Token with `write:packages` scope) for the visibility step. Until `GHCR_PAT` is
+  added, the step logs a warning with the manual URL. **One-time manual step required:**
+  set the package to public at the GHCR settings page.
+
 ## 1.2.5
 - **Fix: GHCR image was inaccessible (private package)** — The nested image path
   `ghcr.io/amantux/ha-homebox-addon/homebox` caused the GitHub API visibility call

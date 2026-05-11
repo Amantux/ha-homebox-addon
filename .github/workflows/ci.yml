@@ -159,11 +159,20 @@ jobs:
 
       - name: Make GHCR package public
         run: |
-          # Package name is "ha-homebox-addon" (no nested path, no encoding needed)
+          # GITHUB_TOKEN can push packages but cannot change visibility.
+          # This step requires a PAT with write:packages scope stored as GHCR_PAT.
+          # To create one: GitHub → Settings → Developer settings → Personal access tokens
+          # → Generate new token (classic) → check "write:packages" → copy token
+          # → repo Settings → Secrets → Actions → New secret named GHCR_PAT
+          if [ -z "$GHCR_PAT" ]; then
+            echo "::warning::GHCR_PAT secret not set — cannot auto-set visibility."
+            echo "::warning::Go to: https://github.com/users/Amantux/packages/container/ha-homebox-addon/settings"
+            exit 0
+          fi
           gh api --method PATCH \
             /user/packages/container/ha-homebox-addon \
             -f visibility=public \
           && echo "✅ GHCR package set to public" \
-          || echo "::warning::Could not auto-set visibility — go to: https://github.com/users/Amantux/packages/container/ha-homebox-addon/settings"
+          || echo "::warning::API call failed — manually set at: https://github.com/users/Amantux/packages/container/ha-homebox-addon/settings"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GHCR_PAT }}
