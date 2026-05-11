@@ -7,8 +7,12 @@
 # ?access_token=TOKEN to the WebSocket URL. Homebox's mwAuthToken middleware
 # already accepts the access_token query parameter as a valid auth mechanism.
 #
+# Anchor: "Set attachment token cookie (accessible to frontend, not HttpOnly)"
+# This comment appears ONLY in setCookies (not in unsetCookies), making it a
+# safe unique insertion point. The new cookie is inserted before it.
+#
 # Usage: awk -f backend-ws-token.awk v1_ctrl_auth.go > patched.go
-/\t\/\/ Set Fake Session cookie/ {
+/\t\/\/ Set attachment token cookie \(accessible to frontend, not HttpOnly\)/ {
     print "\t// Non-HttpOnly ws_token for WebSocket auth through HA Supervisor ingress."
     print "\t// HA Supervisor strips Cookie headers from WS upgrade requests; the"
     print "\t// patched frontend reads this cookie and sends it as ?access_token=."
@@ -18,8 +22,10 @@
     print "\t\tPath:     \"/\","
     print "\t\tDomain:   domain,"
     print "\t\tExpires:  expires,"
+    print "\t\tSecure:   ctrl.cookieSecure,"
     print "\t\tHttpOnly: false,"
-    print "\t\tSameSite: http.SameSiteStrictMode,"
+    print "\t\tSameSite: http.SameSiteLaxMode,"
     print "\t})"
+    print ""
 }
 { print }
