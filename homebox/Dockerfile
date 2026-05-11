@@ -30,28 +30,17 @@ FROM golang:1.26-alpine AS backend-builder
 RUN apk add --no-cache ca-certificates
 WORKDIR /src
 COPY --from=source /src/backend/ ./backend/
+COPY patches/backend-ws-token.awk /tmp/backend-ws-token.awk
 # Patch backend: add non-HttpOnly hb.auth.ws_token cookie alongside hb.auth.token.
 # HA Supervisor strips Cookie headers from WebSocket upgrade requests, so the normal
 # HttpOnly session cookie never arrives at Homebox for WS auth.
-# The frontend (patched above) reads hb.auth.ws_token from document.cookie and sends
-# it as ?access_token= in the WS URL, which mwAuthToken accepts as valid auth.
-RUN awk '/\t\/\/ Set Fake Session cookie/{
-    print "\t// Non-HttpOnly ws_token for WebSocket auth through HA Supervisor ingress."
-    print "\t// HA Supervisor strips Cookie headers from WS upgrade requests; JS reads"
-    print "\t// this cookie and appends it as ?access_token= to the WebSocket URL."
-    print "\thttp.SetCookie(w, \&http.Cookie{"
-    print "\t\tName:     \"hb.auth.ws_token\","
-    print "\t\tValue:    token,"
-    print "\t\tPath:     \"/\","
-    print "\t\tDomain:   domain,"
-    print "\t\tExpires:  expires,"
-    print "\t\tHttpOnly: false,"
-    print "\t\tSameSite: http.SameSiteStrictMode,"
-    print "\t})"
-}{ print }' \
-    backend/app/api/handlers/v1/v1_ctrl_auth.go \
-    > /tmp/v1_ctrl_auth_patched.go \
-    && mv /tmp/v1_ctrl_auth_patched.go backend/app/api/handlers/v1/v1_ctrl_auth.go
+# The frontend reads hb.auth.ws_token from document.cookie and sends it as
+# ?access_token= in the WS URL, which mwAuthToken accepts as valid auth.
+RUN awk -f /tmp/backend-ws-token.awk \
+        backend/app/api/handlers/v1/v1_ctrl_auth.go \
+        > /tmp/v1_ctrl_auth_patched.go \
+    && mv /tmp/v1_ctrl_auth_patched.go \
+        backend/app/api/handlers/v1/v1_ctrl_auth.go
 RUN rm -rf ./backend/app/api/static/public
 COPY --from=frontend-builder /app/.output/public/ ./backend/app/api/static/public/
 WORKDIR /src/backend
