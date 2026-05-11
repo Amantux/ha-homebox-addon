@@ -1,3 +1,12 @@
+## 1.3.2
+- **Fix: WebSocket `NS_ERROR_WEBSOCKET_CONNECTION_REFUSED`** — Homebox's frontend
+  constructs the WS URL as `wss://${host}/api/v1/ws/events` using `window.location.host`
+  directly, which bypasses the HA ingress path entirely. Patched the source at build
+  time to use `wss://${host}/homebox/api/v1/ws/events` instead. The existing nginx
+  `sub_filter '/homebox/' '%%INGRESS_ENTRY%%/'` rewrites this to the actual ingress
+  path in the HTTP response, so the browser connects to the correct
+  `wss://nabu.casa/api/hassio_ingress/TOKEN/api/v1/ws/events`.
+
 ## 1.3.1
 - **Fix: `invalid storage path: not a subdirectory of base path`** — The new
   Homebox storage config uses `HBOX_STORAGE_CONN_STRING` (default `file:///./`,

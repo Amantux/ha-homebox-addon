@@ -11,6 +11,13 @@ FROM node:22-alpine AS frontend-builder
 ENV NUXT_APP_BASE_URL=/homebox/
 WORKDIR /app
 COPY --from=source /src/frontend/ .
+# Patch WebSocket URL to include /homebox/ base path.
+# use-server-events.ts constructs `wss://${host}/api/v1/ws/events` at runtime,
+# bypassing the HA ingress path. We bake /homebox/ into the path so the nginx
+# sub_filter (which rewrites /homebox/ → actual ingress entry) fixes it at
+# response time, giving the browser the correct ingress-prefixed WS URL.
+RUN sed -i 's|${host}/api/v1/ws/events|${host}/homebox/api/v1/ws/events|g' \
+    composables/use-server-events.ts
 RUN npm install -g pnpm \
     && pnpm install --frozen-lockfile \
     && pnpm build
