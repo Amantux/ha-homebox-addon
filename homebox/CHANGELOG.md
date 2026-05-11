@@ -1,3 +1,13 @@
+## 1.2.8
+- **Fix: ARM64 binary was STILL x86-64 — switched to native arm64 CI runners** —
+  The cross-compilation approach was fundamentally broken: BuildKit cached the
+  `backend-builder` stage across platforms (both amd64 and arm64 builds used the
+  same `GOARCH=amd64` layer). Root cause: `${TARGETARCH}` ARG was not being injected
+  separately per platform in stages using `--platform=${BUILDPLATFORM}`. Switched to
+  GitHub's native `ubuntu-24.04-arm` runner (free for public repos) — each platform
+  now builds its own image natively (no QEMU, no cross-compilation), then a
+  `docker buildx imagetools create` merge step creates the final multi-arch manifest.
+
 ## 1.2.7
 - **Fix: ARM64 binary was actually x86-64 (root cause found)** — Homebox uses
   `gen2brain/{avif,heic,jpegxl,webp}` which are CGO packages (C bindings). Setting
