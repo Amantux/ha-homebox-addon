@@ -33,16 +33,22 @@ export TZ="${TZ:-UTC}"
 export HBOX_MODE="${HBOX_MODE:-production}"
 export HBOX_WEB_PORT="7745"           # Fixed internal port — nginx proxies to us
 export HBOX_WEB_HOST="127.0.0.1"     # Loopback only — not directly reachable
-export HBOX_STORAGE_DATA="${HBOX_STORAGE_DATA:-/data/homebox}"
 export HBOX_LOG_LEVEL="${HBOX_LOG_LEVEL:-info}"
 
-mkdir -p "${HBOX_STORAGE_DATA}" /run/nginx
+# Homebox uses file:///./  (cwd-relative) for storage by default.
+# Set cwd to the data dir so all relative paths resolve correctly.
+DATA_DIR="/data/homebox"
+mkdir -p "${DATA_DIR}" /run/nginx
+cd "${DATA_DIR}"
+
+# SQLite DB path (explicit so it's always in our data dir)
+export HBOX_DATABASE_SQLITE_PATH="${DATA_DIR}/.data/homebox.db?_pragma=busy_timeout=999&_pragma=journal_mode=WAL&_fk=1&_time_format=sqlite"
 
 # ---------------------------------------------------------------------------
 # Ensure HBOX_AUTH_API_KEY_PEPPER is set (required by Homebox ≥ 32 bytes).
 # Persist it in /data so rotating the container never invalidates API keys.
 # ---------------------------------------------------------------------------
-PEPPER_FILE="${HBOX_STORAGE_DATA}/.api_key_pepper"
+PEPPER_FILE="${DATA_DIR}/.api_key_pepper"
 if [ -z "${HBOX_AUTH_API_KEY_PEPPER:-}" ]; then
     if [ -f "${PEPPER_FILE}" ]; then
         HBOX_AUTH_API_KEY_PEPPER=$(cat "${PEPPER_FILE}")

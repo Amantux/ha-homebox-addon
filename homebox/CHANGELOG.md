@@ -1,3 +1,11 @@
+## 1.3.1
+- **Fix: `invalid storage path: not a subdirectory of base path`** — The new
+  Homebox storage config uses `HBOX_STORAGE_CONN_STRING` (default `file:///./`,
+  i.e. CWD) + `HBOX_STORAGE_PREFIX_PATH` (default `.data`). The app was running
+  with CWD=`/`, resolving storage to `/.data` (invalid). Fixed by `cd /data/homebox`
+  before starting the app, so all relative defaults resolve correctly. Also set
+  `HBOX_DATABASE_SQLITE_PATH` explicitly to `/data/homebox/.data/homebox.db`.
+
 ## 1.3.0
 - **Fix: `openssl: not found`** — Alpine doesn't include openssl by default;
   switched API key pepper generation to `head -c 48 /dev/urandom | base64`
