@@ -1,3 +1,11 @@
+## 1.3.0
+- **Fix: `openssl: not found`** — Alpine doesn't include openssl by default;
+  switched API key pepper generation to `head -c 48 /dev/urandom | base64`
+  (uses only busybox built-ins, always available).
+- **Fix: nginx 502 on first request** — nginx now starts AFTER Homebox is
+  ready (polls `/api/v1/status` up to 30s), eliminating the race condition
+  that caused immediate 502 errors on add-on start.
+
 ## 1.2.9
 - **Fix: auto-generate `HBOX_AUTH_API_KEY_PEPPER` on first run** — Homebox requires
   a ≥32-byte pepper for API key signing. The add-on now auto-generates one via

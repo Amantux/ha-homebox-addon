@@ -48,7 +48,7 @@ if [ -z "${HBOX_AUTH_API_KEY_PEPPER:-}" ]; then
         HBOX_AUTH_API_KEY_PEPPER=$(cat "${PEPPER_FILE}")
         echo "[homebox] Loaded existing API key pepper from ${PEPPER_FILE}"
     else
-        HBOX_AUTH_API_KEY_PEPPER=$(openssl rand -base64 48)
+        HBOX_AUTH_API_KEY_PEPPER=$(head -c 48 /dev/urandom | base64)
         echo "${HBOX_AUTH_API_KEY_PEPPER}" > "${PEPPER_FILE}"
         chmod 600 "${PEPPER_FILE}"
         echo "[homebox] Generated new API key pepper (stored in ${PEPPER_FILE})"
@@ -65,12 +65,24 @@ sed \
     -e "s|%%INGRESS_ENTRY%%|${INGRESS_ENTRY}|g" \
     /etc/nginx/nginx.conf.tpl > /etc/nginx/nginx.conf
 
+echo "[homebox] Starting Homebox on internal port ${HBOX_WEB_PORT}..."
+echo "[homebox] host arch: $(uname -m) | binary: $(file /app/api 2>/dev/null | cut -d, -f1 || echo unknown)"
+/app/api &
+HBOX_PID=$!
+
+# Wait for Homebox to be ready before starting nginx (avoids 502 on first request)
+echo "[homebox] Waiting for Homebox to be ready..."
+for i in $(seq 1 30); do
+    if wget -qO- http://127.0.0.1:${HBOX_WEB_PORT}/api/v1/status >/dev/null 2>&1; then
+        echo "[homebox] Homebox is ready"
+        break
+    fi
+    sleep 1
+done
+
 echo "[homebox] nginx: ingress_port=${INGRESS_PORT} entry=${INGRESS_ENTRY:-<none>}"
 echo "[homebox] Starting nginx..."
 nginx &
 
-sleep 1
-
-echo "[homebox] Starting Homebox on internal port ${HBOX_WEB_PORT}..."
-echo "[homebox] host arch: $(uname -m) | binary: $(file /app/api 2>/dev/null | cut -d, -f1 || echo unknown)"
-exec /app/api
+# Keep container alive — exit if Homebox exits
+wait $HBOX_PID
