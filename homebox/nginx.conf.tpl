@@ -20,12 +20,41 @@ http {
         ''      close;
     }
 
+    # Extract hb.auth.token cookie value so we can pass it as ?access_token=
+    # for WebSocket connections. HA Supervisor's ingress proxy strips Cookie
+    # headers from WebSocket upgrade requests, so cookie-based auth fails.
+    # Homebox accepts the same session token via ?access_token= query param.
+    map $http_cookie $hb_auth_token {
+        default "";
+        ~(?:^|;\s*)hb\.auth\.token=([^;]+) $1;
+    }
+
     server {
         listen 0.0.0.0:%%INGRESS_PORT%% default_server;
         server_name _;
         client_max_body_size 0;
-        proxy_buffering off;
 
+        # ── WebSocket endpoint ───────────────────────────────────────────────
+        # Separate location so we can:
+        #  1. Disable proxy_buffering (required for streaming WS frames)
+        #  2. Inject access_token query param from cookie (bypasses Supervisor
+        #     stripping Cookie headers on WS upgrade requests)
+        location ~ ^/api/v1/ws/ {
+            proxy_pass         http://127.0.0.1:7745$uri?access_token=$hb_auth_token&$args;
+            proxy_http_version 1.1;
+            proxy_set_header   Upgrade           $http_upgrade;
+            proxy_set_header   Connection        $connection_upgrade;
+            proxy_set_header   Host              $http_host;
+            proxy_set_header   X-Real-IP         $remote_addr;
+            proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+            proxy_set_header   X-Forwarded-Proto $scheme;
+            proxy_set_header   Cookie            $http_cookie;
+            proxy_read_timeout 86400s;
+            proxy_send_timeout 86400s;
+            proxy_buffering    off;
+        }
+
+        # ── All other requests ───────────────────────────────────────────────
         location / {
             proxy_pass         http://127.0.0.1:7745;
             proxy_http_version 1.1;
@@ -39,14 +68,14 @@ http {
             proxy_set_header   X-Real-IP         $remote_addr;
             proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
             proxy_set_header   X-Forwarded-Proto $scheme;
+            proxy_set_header   Cookie            $http_cookie;
 
             # Strip Homebox's X-Frame-Options: DENY so HA can embed in its iframe.
-            # SAMEORIGIN is safe: parent and child share the same Nabu Casa origin.
             proxy_hide_header X-Frame-Options;
             proxy_hide_header Content-Security-Policy;
             add_header X-Frame-Options "SAMEORIGIN" always;
 
-            # Required: disable upstream gzip so sub_filter reads plain text.
+            # Disable upstream gzip so sub_filter reads plain text.
             proxy_set_header   Accept-Encoding   "";
 
             # Rewrite Location headers on 302 redirects.
@@ -54,29 +83,18 @@ http {
             proxy_redirect     /homebox/ %%INGRESS_ENTRY%%/;
             proxy_redirect     / %%INGRESS_ENTRY%%/;
 
-            # ── Path rewriting ─────────────────────────────────────────────────
-            # The frontend is built with NUXT_APP_BASE_URL=/homebox/ so Nuxt bakes
-            # /homebox/ into every asset path AND into the compiled Vue Router base.
-            # A single sub_filter rewrites /homebox/ → the real ingress entry,
-            # fixing asset loads AND client-side routing in one rule.
-            #
-            # In standalone mode (INGRESS_ENTRY="") this becomes:
-            #   sub_filter '/homebox/' '/';
-            # which correctly strips the prefix for direct access.
             sub_filter_once off;
             sub_filter_types *;
 
-            # /set-theme.js is hardcoded absolute in nuxt.config.ts app.head —
-            # Nuxt does not auto-prefix head script src values with app.baseURL.
+            # /set-theme.js is hardcoded absolute in nuxt.config.ts app.head.
             sub_filter 'src="/set-theme.js"' 'src="/homebox/set-theme.js"';
 
-            # JS fetch/useFetch calls use absolute /api/ paths — not auto-prefixed.
+            # JS fetch/useFetch calls use absolute /api/ paths.
             sub_filter '"/api/'  '"/homebox/api/';
             sub_filter "'/api/"  "'/homebox/api/";
             sub_filter '`/api/'  '`/homebox/api/';
 
-            # Main rewrite: everything /homebox/ → actual ingress entry.
-            # Catches: /_nuxt/ assets, /api/ calls, /set-theme.js, router base.
+            # Main rewrite: /homebox/ → actual ingress entry.
             sub_filter '/homebox/' '%%INGRESS_ENTRY%%/';
         }
     }

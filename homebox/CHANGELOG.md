@@ -1,3 +1,17 @@
+## 1.3.3
+- **Fix: WebSocket 401 "authorization header or query is required"** — HA
+  Supervisor's ingress proxy strips `Cookie` headers from WebSocket upgrade
+  requests (a known Supervisor limitation). Homebox requires `hb.auth.token`
+  cookie for WS auth but it never arrives. Fix: nginx `map` directive extracts
+  the `hb.auth.token` cookie value from the full cookie string, then the
+  dedicated `/api/v1/ws/` location injects it as `?access_token=TOKEN` query
+  param — which Homebox accepts as an alternative auth mechanism. Regular HTTP
+  requests continue to use cookie-based auth unaffected.
+- **Fix: `proxy_buffering off` moved to WS-only location** — `sub_filter`
+  requires buffering to scan response bodies. Previously `proxy_buffering off`
+  was set server-wide, which could prevent sub_filter from working on large JS
+  files. Now buffering is only disabled for the streaming WS location.
+
 ## 1.3.2
 - **Fix: WebSocket `NS_ERROR_WEBSOCKET_CONNECTION_REFUSED`** — Homebox's frontend
   constructs the WS URL as `wss://${host}/api/v1/ws/events` using `window.location.host`
