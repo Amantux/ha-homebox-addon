@@ -1,3 +1,21 @@
+## 1.3.5
+- **Fix: WebSocket 401 — root cause properly resolved** — HA Supervisor's ingress
+  proxy strips **all** Cookie headers from WebSocket upgrade requests before they
+  reach the container's nginx. Previous attempts to extract `hb.auth.token` via
+  nginx `map` or `if` failed because the cookie simply isn't present at the nginx
+  layer for WS connections. Real fix is two-pronged:
+  1. **Backend patch** (`v1_ctrl_auth.go`): `setCookies` now also sets
+     `hb.auth.ws_token` — an identical non-`HttpOnly` cookie. Because it is not
+     HttpOnly, JavaScript can read it via `document.cookie`.
+  2. **Frontend patch** (`use-server-events.ts`): The WebSocket URL builder now
+     reads `hb.auth.ws_token` from `document.cookie` and appends
+     `?access_token=TOKEN` to the WS URL. Homebox's `mwAuthToken` middleware
+     already accepts `access_token` as a query parameter, so no backend auth logic
+     changes are needed. The token travels in the URL (not a Cookie header) and
+     therefore survives the Supervisor stripping.
+- **Remove nginx map/if cookie extraction** — now redundant; cookie is passed
+  directly in the WS URL by the frontend.
+
 ## 1.3.4
 - **Fix: nginx `invalid number of the map parameters` crash on startup** —
   nginx's `map` directive does not support `$1` positional capture

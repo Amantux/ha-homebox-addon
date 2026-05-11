@@ -26,20 +26,12 @@ http {
         client_max_body_size 0;
 
         # ── WebSocket endpoint ───────────────────────────────────────────────
-        # Separate location so we can:
-        #  1. Disable proxy_buffering (required for streaming WS frames)
-        #  2. Inject access_token query param from cookie (bypasses Supervisor
-        #     stripping Cookie headers on WS upgrade requests)
+        # Separate location so we can disable proxy_buffering (required for
+        # streaming WS frames without buffering the response body).
+        # Auth token is passed as ?access_token= in the URL by the patched
+        # frontend (hb.auth.ws_token non-HttpOnly cookie → JS → WS URL).
         location ~ ^/api/v1/ws/ {
-            # Extract hb.auth.token cookie using if/regex ($1 capture works here).
-            # HA Supervisor strips Cookie headers from WS upgrade requests, so
-            # cookie-based auth never reaches Homebox. Inject as ?access_token=.
-            set $hb_auth_token "";
-            if ($http_cookie ~ "(?:^|;\s*)hb\.auth\.token=([^;]+)") {
-                set $hb_auth_token $1;
-            }
-
-            proxy_pass         http://127.0.0.1:7745$uri?access_token=$hb_auth_token&$args;
+            proxy_pass         http://127.0.0.1:7745;
             proxy_http_version 1.1;
             proxy_set_header   Upgrade           $http_upgrade;
             proxy_set_header   Connection        $connection_upgrade;
