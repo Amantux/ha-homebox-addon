@@ -39,6 +39,24 @@ export HBOX_LOG_LEVEL="${HBOX_LOG_LEVEL:-info}"
 mkdir -p "${HBOX_STORAGE_DATA}" /run/nginx
 
 # ---------------------------------------------------------------------------
+# Ensure HBOX_AUTH_API_KEY_PEPPER is set (required by Homebox ≥ 32 bytes).
+# Persist it in /data so rotating the container never invalidates API keys.
+# ---------------------------------------------------------------------------
+PEPPER_FILE="${HBOX_STORAGE_DATA}/.api_key_pepper"
+if [ -z "${HBOX_AUTH_API_KEY_PEPPER:-}" ]; then
+    if [ -f "${PEPPER_FILE}" ]; then
+        HBOX_AUTH_API_KEY_PEPPER=$(cat "${PEPPER_FILE}")
+        echo "[homebox] Loaded existing API key pepper from ${PEPPER_FILE}"
+    else
+        HBOX_AUTH_API_KEY_PEPPER=$(openssl rand -base64 48)
+        echo "${HBOX_AUTH_API_KEY_PEPPER}" > "${PEPPER_FILE}"
+        chmod 600 "${PEPPER_FILE}"
+        echo "[homebox] Generated new API key pepper (stored in ${PEPPER_FILE})"
+    fi
+fi
+export HBOX_AUTH_API_KEY_PEPPER
+
+# ---------------------------------------------------------------------------
 # Build nginx config from template, substituting runtime ingress values.
 # If INGRESS_ENTRY is empty (standalone mode), sub_filter rules become no-ops.
 # ---------------------------------------------------------------------------

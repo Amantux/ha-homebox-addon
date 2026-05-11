@@ -1,3 +1,9 @@
+## 1.2.9
+- **Fix: auto-generate `HBOX_AUTH_API_KEY_PEPPER` on first run** — Homebox requires
+  a ≥32-byte pepper for API key signing. The add-on now auto-generates one via
+  `openssl rand -base64 48` and persists it in `/data/homebox/.api_key_pepper` so
+  API keys survive container restarts. No manual configuration required.
+
 ## 1.2.8
 - **Fix: ARM64 binary was STILL x86-64 — switched to native arm64 CI runners** —
   The cross-compilation approach was fundamentally broken: BuildKit cached the
