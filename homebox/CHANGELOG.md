@@ -1,3 +1,12 @@
+## 1.3.4
+- **Fix: nginx `invalid number of the map parameters` crash on startup** —
+  nginx's `map` directive does not support `$1` positional capture
+  backreferences (those only work in `if` blocks and `rewrite` rules). Replaced
+  the `map`-based cookie extraction with `set $hb_auth_token ""; if
+  ($http_cookie ~ ...) { set $hb_auth_token $1; }` directly in the WebSocket
+  location block. nginx now starts successfully and extracts the
+  `hb.auth.token` cookie to inject as `?access_token=` for WS auth.
+
 ## 1.3.3
 - **Fix: WebSocket 401 "authorization header or query is required"** — HA
   Supervisor's ingress proxy strips `Cookie` headers from WebSocket upgrade

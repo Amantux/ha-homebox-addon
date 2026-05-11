@@ -20,15 +20,6 @@ http {
         ''      close;
     }
 
-    # Extract hb.auth.token cookie value so we can pass it as ?access_token=
-    # for WebSocket connections. HA Supervisor's ingress proxy strips Cookie
-    # headers from WebSocket upgrade requests, so cookie-based auth fails.
-    # Homebox accepts the same session token via ?access_token= query param.
-    map $http_cookie $hb_auth_token {
-        default "";
-        ~(?:^|;\s*)hb\.auth\.token=([^;]+) $1;
-    }
-
     server {
         listen 0.0.0.0:%%INGRESS_PORT%% default_server;
         server_name _;
@@ -40,6 +31,14 @@ http {
         #  2. Inject access_token query param from cookie (bypasses Supervisor
         #     stripping Cookie headers on WS upgrade requests)
         location ~ ^/api/v1/ws/ {
+            # Extract hb.auth.token cookie using if/regex ($1 capture works here).
+            # HA Supervisor strips Cookie headers from WS upgrade requests, so
+            # cookie-based auth never reaches Homebox. Inject as ?access_token=.
+            set $hb_auth_token "";
+            if ($http_cookie ~ "(?:^|;\s*)hb\.auth\.token=([^;]+)") {
+                set $hb_auth_token $1;
+            }
+
             proxy_pass         http://127.0.0.1:7745$uri?access_token=$hb_auth_token&$args;
             proxy_http_version 1.1;
             proxy_set_header   Upgrade           $http_upgrade;
