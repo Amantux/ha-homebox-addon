@@ -20,10 +20,11 @@ RUN npm install -g pnpm \
     && pnpm install --frozen-lockfile \
     && pnpm build
 
-# ── Stage 3: Cross-compile Go backend (native, no QEMU) ────────────────────
-# Go has first-class cross-compilation: GOOS/GOARCH produce the target binary
-# on the build host without emulation. CGO disabled — modernc.org/sqlite is
-# pure Go.
+# ── Stage 3: Cross-compile Go backend (native build host, no QEMU) ─────────
+# Homebox uses gen2brain/{avif,heic,jpegxl,webp} which are CGO packages.
+# Building with -tags purego forces those packages to use their pure-Go/WASM
+# (wazero) codec implementations, removing all CGO dependencies entirely.
+# CGO_ENABLED=0 + purego = fully static binary, genuine cross-compilation.
 FROM --platform=${BUILDPLATFORM} golang:1.26-alpine AS backend-builder
 ARG TARGETOS TARGETARCH
 RUN apk add --no-cache ca-certificates
@@ -32,8 +33,9 @@ COPY --from=source /src/backend/ ./backend/
 RUN rm -rf ./backend/app/api/static/public
 COPY --from=frontend-builder /app/.output/public/ ./backend/app/api/static/public/
 WORKDIR /src/backend
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
-    go build -ldflags="-s -w" -o /app/api ./app/api/
+RUN echo "Cross-compiling: GOOS=${TARGETOS} GOARCH=${TARGETARCH}" && \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+    go build -tags purego -ldflags="-s -w" -o /app/api ./app/api/
 
 # ── Stage 4: Minimal runtime image (target platform) ───────────────────────
 FROM alpine:3.20

@@ -1,3 +1,12 @@
+## 1.2.7
+- **Fix: ARM64 binary was actually x86-64 (root cause found)** — Homebox uses
+  `gen2brain/{avif,heic,jpegxl,webp}` which are CGO packages (C bindings). Setting
+  `CGO_ENABLED=0` without `-tags purego` silently fell back to native amd64 compilation
+  instead of cross-compiling for arm64. The arm64 image manifest existed but contained
+  an x86-64 ELF binary. Fixed by adding `-tags purego` to the Go build command, which
+  forces all gen2brain packages to use their pure-Go/WASM (wazero) implementations,
+  removing all CGO dependencies and enabling genuine static cross-compilation.
+
 ## 1.2.6
 - **Fix: GHCR package visibility** — `GITHUB_TOKEN` in CI cannot change package
   visibility (GitHub limitation). CI now uses `GHCR_PAT` secret (a Personal Access
